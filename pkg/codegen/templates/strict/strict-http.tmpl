@@ -51,8 +51,16 @@ type strictHandler struct {
                 {{if .IsJSON }}
                     var body {{$opid}}{{.NameTag}}RequestBody
                     if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-                        sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
-                        return
+                        {{ if .Required -}}
+                            sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+                            return
+                        {{ else -}}
+                            if !errors.Is(err, io.EOF) {
+                                sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+                                return
+                            }
+                            body = {{$opid}}{{.NameTag}}RequestBody{}
+                        {{ end -}}
                     }
                     request.{{if $multipleBodies}}{{.NameTag}}{{end}}Body = &body
                 {{else if eq .NameTag "Formdata" -}}
